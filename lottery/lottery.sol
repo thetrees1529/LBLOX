@@ -177,6 +177,10 @@ contract LotteryContract is Ownable, Random {
         return getTicketCountAtFor(id, msg.sender);
     }
     
+    function getNextPrizeIndex() public view returns(uint) {
+        return getPrizeIndexAt(id);
+    }
+
     function getNextPrize() public view returns(uint) {
         return getNextPrizeAt(id);
     }
@@ -222,6 +226,11 @@ contract LotteryContract is Ownable, Random {
         return lottery.ticketsBought[_addr];
     }
     
+    function getPrizeIndexAt(uint _id) public view returns(uint) {
+        Lottery storage lottery = lotteries[_id];
+        return lottery.prizeIndex;
+    }
+
     function getNextPrizeAt(uint _id) public view returns(uint prize) {
         Lottery storage lottery = lotteries[_id];
         if(lottery.prizeData.weightings.length > 0) {
