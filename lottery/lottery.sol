@@ -204,6 +204,10 @@ contract LotteryContract is Ownable, Random {
     function getWinners() public view returns(Winner[] memory) {
         return getWinnersAt(id);
     }
+
+    function getRefundableTicketCount() public view returns(uint) {
+        return getRefundableTicketCountAtFor(id, msg.sender);
+    }
     
     //view functions
     function getPotAt(uint _id) public view returns(uint) {
@@ -266,6 +270,13 @@ contract LotteryContract is Ownable, Random {
         Lottery storage lottery = lotteries[_id];
         return lottery.winners;
     }
+
+    function getRefundableTicketCountAtFor(uint _id, address _addr) public view returns(uint refundable) {
+        Lottery storage lottery = lotteries[_id];
+        if (lottery.status == STATUS.cancelled && !lottery.refundClaimed[_addr]) {
+            refundable = lottery.ticketsBought[_addr];
+        }
+    }
     
     //user functions
     function buyTickets() public payable {
@@ -291,8 +302,7 @@ contract LotteryContract is Ownable, Random {
 
     function refundTicketsAt(uint _id) public {
         Lottery storage lottery = lotteries[_id];
-        require(lottery.status == STATUS.cancelled, "This lottery has not been cancelled as of yet.");
-        require(!lottery.refundClaimed[msg.sender], "Already refunded your tickets for this lottery.");
+        require(getRefundableTicketCountAtFor(id, msg.sender) > 0, "No tickets to claim at this address.");
         lottery.refundClaimed[msg.sender] = true;
         (bool success,) = msg.sender.call{value: lottery.ticketPrice * lottery.ticketsBought[msg.sender]}("");
         require(success, "Lottery cannot honour your refund request right now; please try again later.");
