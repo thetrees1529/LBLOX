@@ -188,6 +188,10 @@ contract LotteryContract is Ownable, Random {
     function getPrizes() public view returns(uint[] memory) {
         return getPrizesAt(id);
     }
+
+    function getRemainingPrizes() public view returns(uint[] memory prizes) {
+        return getRemainingPrizesAt(id);
+    }
     
     function getPrizeFor(uint _index) public view returns(uint) {
         return getPrizeAtFor(id, _index);
@@ -243,13 +247,24 @@ contract LotteryContract is Ownable, Random {
     }
     
     function getPrizesAt(uint _id) public view returns(uint[] memory prizes) {
+        return getPrizesAtFrom(_id, 0);
+    }
+    
+    function getPrizesAtFrom(uint _id, uint _from) public view returns(uint[] memory prizes) {
         Lottery storage lottery = lotteries[_id];
-        prizes = new uint[](lottery.prizeData.weightings.length);
-        for(uint i; i < lottery.prizeData.weightings.length; i ++) {
+        prizes = new uint[](lottery.prizeData.weightings.length - _from);
+        for(uint i = _from; i < lottery.prizeData.weightings.length; i ++) {
             prizes[i] = getPrizeAtFor(_id, i);
         }
     }
     
+    function getRemainingPrizesAt(uint _id) public view returns(uint[] memory prizes) {
+        Lottery storage lottery = lotteries[_id];
+        if(lottery.status != STATUS.cancelled) {
+            prizes = getPrizesAtFrom(id, lottery.prizeIndex);
+        }
+    }
+
     function getPrizeAtFor(uint _id, uint _index) public view returns(uint) {
         Lottery storage lottery = lotteries[_id];
         uint multiplier = lottery.pot / lottery.prizeData.totalWeight;
@@ -278,6 +293,7 @@ contract LotteryContract is Ownable, Random {
         }
     }
     
+
     //user functions
     function buyTickets() public payable {
         Lottery storage lottery = lotteries[id];
