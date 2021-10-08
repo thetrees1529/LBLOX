@@ -152,6 +152,13 @@ contract LotteryContract is Ownable, Random {
         }
     }
     
+    function drawAvailablePrizes() public onlyOwner {
+        Lottery storage lottery = lotteries[id];
+        while(lottery.status == STATUS.awaitingdraw) {
+            drawPrize();
+        }
+    }
+
     function cancelLottery() public onlyOwner {
         Lottery storage lottery = lotteries[id];
         require(lottery.status != STATUS.ended, "Lottery already ended.");
