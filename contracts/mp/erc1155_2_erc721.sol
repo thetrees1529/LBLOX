@@ -9,7 +9,7 @@ import "@openzeppelin/contracts/token/ERC1155/utils/ERC1155Holder.sol";
 import "@openzeppelin/contracts/token/ERC721/utils/ERC721Holder.sol";
 import "@openzeppelin/contracts/token/ERC721/extensions/ERC721Enumerable.sol";
 
-contract Wrapper is Context, Ownable, ERC721("LBLOX WRAPPED ERC1155","LBWERC1155"),  ERC721Holder, ERC721Enumerable, ERC1155Holder {
+contract Wrapper is Context, Ownable, ERC721("LBLOX WRAPPED ERC1155","LBWERC1155"), ERC721Enumerable, ERC721Holder, ERC1155Holder {
     using Counters for Counters.Counter;
     using Strings for uint;
 
@@ -63,6 +63,17 @@ contract Wrapper is Context, Ownable, ERC721("LBLOX WRAPPED ERC1155","LBWERC1155
     ) public override returns (bytes4) {
         ERC1155(_msgSender()).safeBatchTransferFrom(address(this), _from, _tokenIds, _values, _data);
         return this.onERC1155BatchReceived.selector;
+    }
+
+    function onERC721Received(
+        address _from,
+        address,
+        uint256 _tokenId,
+        uint256,
+        bytes memory
+    ) public returns (bytes4) {
+        _unwrap(_from, _tokenId);
+        return this.onERC1155Received.selector;
     }
 
     function getBaseURI(ERC1155 _for) public view returns(string memory) {
