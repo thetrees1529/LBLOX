@@ -6,9 +6,10 @@ import "@openzeppelin/contracts/utils/Counters.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/token/ERC1155/ERC1155.sol";
 import "@openzeppelin/contracts/token/ERC1155/utils/ERC1155Holder.sol";
+import "@openzeppelin/contracts/token/ERC721/utils/ERC721Holder.sol";
 import "@openzeppelin/contracts/token/ERC721/extensions/ERC721Enumerable.sol";
 
-contract Wrapper is Context, Ownable, ERC721("LBLOX WRAPPED ERC1155","LBWERC1155"), ERC721Enumerable, ERC1155Holder {
+contract Wrapper is Context, Ownable, ERC721("LBLOX WRAPPED ERC1155","LBWERC1155"),  ERC721Holder, ERC721Enumerable, ERC1155Holder {
     using Counters for Counters.Counter;
     using Strings for uint;
 
@@ -74,7 +75,6 @@ contract Wrapper is Context, Ownable, ERC721("LBLOX WRAPPED ERC1155","LBWERC1155
 
     function _wrap(address _from, ERC1155 _token, uint _tokenId, uint _value) private {
         uint wrapId = idCounter.current();
-        _token.safeTransferFrom(_from, address(this), _tokenId, _value, "");
         _mint(_from, _tokenId);
         _setWrapInfo(wrapId, _token, _tokenId, _value);(_token, "", _tokenId, _value);
         idCounter.increment();
