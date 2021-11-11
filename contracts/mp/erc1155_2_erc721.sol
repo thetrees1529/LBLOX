@@ -1,11 +1,12 @@
 pragma solidity ^0.8.0;
 
+import "@openzeppelin/contracts/utils/Context.sol";
 import "@openzeppelin/contracts/utils/Counters.sol";
 import "@openzeppelin/contracts/token/ERC1155/IERC1155.sol";
 import "@openzeppelin/contracts/token/ERC1155/utils/ERC1155Holder.sol";
 import "@openzeppelin/contracts/token/ERC721/ERC721.sol";
 
-contract Wrapper is ERC721("LBLOX WRAPPED ERC1155","LBWERC1155"), ERC1155Holder {
+contract Wrapper is Context, ERC721("LBLOX WRAPPED ERC1155","LBWERC1155"), ERC1155Holder {
     using Counters for Counters.Counter;
 
     Counters.Counter idCounter;
@@ -21,6 +22,21 @@ contract Wrapper is ERC721("LBLOX WRAPPED ERC1155","LBWERC1155"), ERC1155Holder 
     event Wrapped(address from, IERC1155 token, uint tokenId, uint value, uint wrappedTokenId);
     event Unwrapped(address from, IERC1155 token, uint tokenId, uint value, uint wrappedTokenId);
 
+    function wrap(IERC1155 _token, uint _tokenId, uint _value) public {
+        address sender = _msgSender();
+        _wrap(sender, _token, _tokenId, _value);
+    }
+
+    function unwrap(uint _tokenId) public {
+        address sender = _msgSender();
+        _unwrap(sender, _tokenId);
+    }
+
+    function getTokenInfo(uint _tokenId) public view returns(TokenInfo memory) {
+        return _getTokenInfo(_tokenId);
+    }
+    
+
     function _wrap(address _from, IERC1155 _token, uint _tokenId, uint _value) private {
         uint id = idCounter.current();
         _token.safeTransferFrom(_from, address(this), _tokenId, _value, "");
@@ -31,10 +47,14 @@ contract Wrapper is ERC721("LBLOX WRAPPED ERC1155","LBWERC1155"), ERC1155Holder 
     }
 
     function _unwrap(address _to, uint _tokenId) private {
-        TokenInfo storage tokenInfo = _tokenInfo[_tokenId];
+        TokenInfo storage tokenInfo = _getTokenInfo(_tokenId);
         safeTransferFrom(_to, address(this), _tokenId);
         tokenInfo.token.safeTransferFrom(address(this), _to, tokenInfo.tokenId, tokenInfo.value, "");
         emit Unwrapped(_to, tokenInfo.token, tokenInfo.tokenId, tokenInfo.value, _tokenId);
+    }
+
+    function _getTokenInfo(uint _tokenId) private view returns(TokenInfo storage) {
+        return _tokenInfo[_tokenId];
     }
 
     function supportsInterface(bytes4 interfaceId) public view override(ERC1155Receiver, ERC721) returns(bool) {
