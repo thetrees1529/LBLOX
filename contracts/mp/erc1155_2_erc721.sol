@@ -27,11 +27,6 @@ contract Wrapper is Context, Ownable, ERC721("LBLOX WRAPPED ERC1155","LBWERC1155
     event Wrapped(address from, ERC1155 token, uint tokenId, uint value, uint wrappedTokenId);
     event Unwrapped(address from, ERC1155 token, uint tokenId, uint value, uint wrappedTokenId);
 
-    function unwrap(uint _tokenId) public {
-        address sender = _msgSender();
-        _unwrap(sender, _tokenId);
-    }
-
     function getWrapInfo(uint _tokenId) public view returns(WrapInfo memory) {
         return _getWrapInfo(_tokenId);
     }
@@ -71,7 +66,7 @@ contract Wrapper is Context, Ownable, ERC721("LBLOX WRAPPED ERC1155","LBWERC1155
         uint256 _tokenId,
         uint256,
         bytes memory
-    ) public returns (bytes4) {
+    ) public override returns (bytes4) {
         _unwrap(_from, _tokenId);
         return this.onERC1155Received.selector;
     }
