@@ -9,7 +9,7 @@ import "@openzeppelin/contracts/token/ERC1155/utils/ERC1155Holder.sol";
 import "@openzeppelin/contracts/token/ERC721/utils/ERC721Holder.sol";
 import "@openzeppelin/contracts/token/ERC721/extensions/ERC721Enumerable.sol";
 
-contract Wrapper is Context, Ownable, ERC721("LBLOX WRAPPED ERC1155","LBWERC1155"), ERC721Enumerable, ERC721Holder, ERC1155Holder {
+contract Wrapper is Context, Ownable, ERC721("LBLOX WRAPPED ERC1155","LBWERC1155"), ERC721Holder, ERC721Enumerable, ERC1155Holder {
     using Counters for Counters.Counter;
     using Strings for uint;
 
@@ -23,6 +23,7 @@ contract Wrapper is Context, Ownable, ERC721("LBLOX WRAPPED ERC1155","LBWERC1155
 
     mapping(uint => WrapInfo) _wrapInfo;
     mapping(ERC1155 => string) _baseURIs;
+    mapping(ERC1155 => mapping(uint => uint)) _ERC1155LastBalances;
 
     event Wrapped(address from, ERC1155 token, uint tokenId, uint value, uint wrappedTokenId);
     event Unwrapped(address from, ERC1155 token, uint tokenId, uint value, uint wrappedTokenId);
@@ -45,30 +46,30 @@ contract Wrapper is Context, Ownable, ERC721("LBLOX WRAPPED ERC1155","LBWERC1155
         uint256 _value,
         bytes memory
     ) public override returns (bytes4) {
+        _verifyReceivedERC1155(ERC1155(_msgSender()), _tokenId, _value);
         _wrap(_from, ERC1155(_msgSender()), _tokenId, _value);
         return this.onERC1155Received.selector;
     }
 
     function onERC1155BatchReceived(
-        address _from,
         address,
-        uint256[] memory _tokenIds,
-        uint256[] memory _values,
-        bytes memory _data
-    ) public override returns (bytes4) {
-        ERC1155(_msgSender()).safeBatchTransferFrom(address(this), _from, _tokenIds, _values, _data);
-        return this.onERC1155BatchReceived.selector;
+        address,
+        uint256[] memory,
+        uint256[] memory,
+        bytes memory
+    ) public pure override returns (bytes4) {
+        revert();
     }
 
     function onERC721Received(
         address _from,
         address,
         uint256 _tokenId,
-        uint256,
         bytes memory
     ) public override returns (bytes4) {
+        _verifyReceivedWrappedNFT(_tokenId);
         _unwrap(_from, _tokenId);
-        return this.onERC1155Received.selector;
+        return this.onERC721Received.selector;
     }
 
     function getBaseURI(ERC1155 _for) public view returns(string memory) {
@@ -81,7 +82,7 @@ contract Wrapper is Context, Ownable, ERC721("LBLOX WRAPPED ERC1155","LBWERC1155
 
     function _wrap(address _from, ERC1155 _token, uint _tokenId, uint _value) private {
         uint wrapId = idCounter.current();
-        _mint(_from, _tokenId);
+        _mint(_from, wrapId);
         _setWrapInfo(wrapId, _token, _tokenId, _value);(_token, "", _tokenId, _value);
         idCounter.increment();
         emit Wrapped(_from, _token, _tokenId, _value, wrapId);
@@ -89,7 +90,6 @@ contract Wrapper is Context, Ownable, ERC721("LBLOX WRAPPED ERC1155","LBWERC1155
 
     function _unwrap(address _to, uint _tokenId) private {
         WrapInfo storage wrapInfo = _getWrapInfo(_tokenId);
-        safeTransferFrom(_to, address(this), _tokenId);
         wrapInfo.token.safeTransferFrom(address(this), _to, wrapInfo.tokenId, wrapInfo.value, "");
         emit Unwrapped(_to, wrapInfo.token, wrapInfo.tokenId, wrapInfo.value, _tokenId);
     }
@@ -106,7 +106,25 @@ contract Wrapper is Context, Ownable, ERC721("LBLOX WRAPPED ERC1155","LBWERC1155
     }
     function _setBaseURI(ERC1155 _for, string calldata _baseURI) private {
         _baseURIs[_for] = _baseURI;
-    } 
+    }
+
+    function _verifyReceivedWrappedNFT(uint _tokenId) private view  {
+        require(ownerOf(_tokenId) == address(this));
+    }
+
+    function _verifyReceivedERC1155(ERC1155 _token, uint _tokenId, uint _value) private  {
+        uint lastBalance = _getERC1155LastBalance(_token, _tokenId);
+        uint currentBalance = _token.balanceOf(address(this), _tokenId);
+        require(currentBalance >= lastBalance + _value);
+        _setERC1155LastBalance(lastBalance, _token, _tokenId);
+    }
+
+    function _getERC1155LastBalance(ERC1155 _token, uint _tokenId) private view returns(uint) {
+        return _ERC1155LastBalances[_token][_tokenId];
+    }
+    function _setERC1155LastBalance(uint _newBalance, ERC1155 _token, uint _tokenId) private {
+        _ERC1155LastBalances[_token][_tokenId] = _newBalance;
+    }
 
     function _beforeTokenTransfer(address from, address to, uint tokenId) internal override(ERC721, ERC721Enumerable) {
         return super._beforeTokenTransfer(from, to, tokenId);
