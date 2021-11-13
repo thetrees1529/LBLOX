@@ -58,7 +58,7 @@ contract Wrapper is Context, Ownable, ERC721("LBLOX WRAPPED ERC1155","LBWERC1155
         uint256[] memory,
         bytes memory
     ) public pure override returns (bytes4) {
-        revert();
+        revert("This contract does not support batch receival of NFTs.");
     }
 
     function onERC721Received(
